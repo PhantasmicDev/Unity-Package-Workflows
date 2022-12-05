@@ -15,15 +15,10 @@ jobs:
       - uses: nowsprinting/check-version-format-action@v3.2.4
         id: version
   
-  log:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo ${{ inputs.verify_tag }}
-  
   generate:
     runs-on: ubuntu-latest
     needs: [verify]
-    if: inputs.verify_tag == 'false' || needs.verify.outputs.isValid == 'true'
+    if: ${{ inputs.verify_tag == 'false' }} || needs.verify.outputs.isValid == 'true'
     
     steps:
       # Prevents error when DocFX tries to look for index.md
