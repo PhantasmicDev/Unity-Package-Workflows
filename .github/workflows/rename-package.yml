@@ -1,0 +1,81 @@
+name: Rename Package
+
+on:
+
+  workflow_call:
+    inputs:
+      organization_name:
+        type: string
+        required: true
+      package_name:
+        type: string
+        required: true
+       
+jobs:
+  Rename:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+                  
+      - name: Get Updated Names 
+        run: |
+          
+          Organization_Name=$(echo "${{ inputs.organization_name }}" | tr -dc '[:alnum:]')
+          Package_Name=$(echo "${{ inputs.package_name }}" | tr -dc '[:alnum:]')
+          
+          echo "organization_name=$Organization_Name" >> $GITHUB_ENV
+          echo "package_name=$Package_Name" >> $GITHUB_ENV
+          echo "full_package_name=$(echo "com.${Organization_Name}.${Package_Name}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV   
+      
+      - name: Update package.json
+        run: echo "`jq '.name="${{ env.full_package_name }}" | .displayName="${{ inputs.package_name }}"' package.json`" > package.json
+      
+      - name: Rename Assembly Definition Files
+        run: |          
+          Runtime_Assembly_Definition=$(ls Runtime/*.asmdef| head -1)
+          if [ ! -z "$Runtime_Assembly_Definition" ]
+          then
+            Runtime_Assembly_Definition_Name="${{ env.organization_name }}.${{ env.package_name }}"
+            Runtime_Assembly_Definition_Path="Runtime/"$Runtime_Assembly_Definition_Name".asmdef"
+            mv $Runtime_Assembly_Definition $Runtime_Assembly_Definition_Path
+            echo "runtime_assembly_definition_name=$Runtime_Assembly_Definition_Name" >> $GITHUB_ENV
+            echo "runtime_assembly_definition_path=$Runtime_Assembly_Definition_Path" >> $GITHUB_ENV
+          else
+            echo 'No Runtime assembly definition file was found to edit!'
+          fi
+          
+          Editor_Assembly_Definition=$(ls Editor/*.asmdef| head -1)
+          if [ ! -z "$Editor_Assembly_Definition" ]
+          then
+            Editor_Assembly_Definition_Name="${{ env.organization_name }}.${{ env.package_name }}.Editor"
+            Editor_Assembly_Definition_Path="Editor/"$Editor_Assembly_Definition_Name".asmdef"
+            mv $Editor_Assembly_Definition $Editor_Assembly_Definition_Path
+            echo "editor_assembly_definition_name=$Editor_Assembly_Definition_Name" >> $GITHUB_ENV
+            echo "editor_assembly_definition_path=$Editor_Assembly_Definition_Path" >> $GITHUB_ENV
+          else
+            echo 'No Editor assembly definition file was found to edit!'
+          fi
+        # TODO: Implement for test assembly definitions
+      
+      - name: Update Assembly Definition files
+        run: |
+          echo "`jq '.name="${{ env.runtime_assembly_definition_name }}"' \
+            "${{ env.runtime_assembly_definition_path }}"`" > "${{ env.runtime_assembly_definition_path }}"
+          echo "`jq '.name="${{ env.editor_assembly_definition_name }}" | \
+            .references[0]="${{ env.runtime_assembly_definition_name }}"' \
+            "${{ env.editor_assembly_definition_path }}"`" > "${{ env.editor_assembly_definition_path }}"
+        
+      - name: Update Name in Generated Documentation
+        run: |
+          APP_FOOTER="<span>Copyright © ${{ inputs.organization_name }} <br>Generated with <strong>DocFX</strong></span>"
+          
+          echo "`jq --arg APP_FOOTER "$APP_FOOTER" '.build.globalMetadata._appTitle="${{ inputs.package_name }}" | \
+            .build.globalMetadata._appFooter=$APP_FOOTER' Documentation~/docfx.json`" > Documentation~/docfx.json
+        
+      - name: Commit & Push
+        uses: EndBug/add-and-commit@v9.1.1
+        with:
+          message: Renamed Package
+          committer_name: GitHub Actions
+          committer_email: 41898282+github-actions[bot]@users.noreply.github.com
