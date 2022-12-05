@@ -18,7 +18,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     needs: [verify]
-    if: needs.verify.outputs.isValid == 'true' || inputs.verify_tag == 'false'
+    if: inputs.verify_tag == 'false' || needs.verify.outputs.isValid == 'true'
     
     steps:
       # Prevents error when DocFX tries to look for index.md
