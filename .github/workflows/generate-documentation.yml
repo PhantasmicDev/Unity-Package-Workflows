@@ -9,7 +9,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    if: inputs.verify_tag == 'true'
+ #  if: inputs.verify_tag == 'true'
     outputs:
       isValid: ${{ steps.version.outputs.is_valid }}
     steps:
@@ -18,10 +18,8 @@ jobs:
   
   generate:
     runs-on: ubuntu-latest
-    needs: [verify]
-    if: | 
-      always() && 
-      needs.verify.outputs.isValid == 'true' || inputs.verify_tag == 'false'
+ #  needs: [verify]
+ #  if: needs.verify.outputs.isValid == 'true' || inputs.verify_tag == 'false'
     
     steps:
       # Prevents error when DocFX tries to look for index.md
