@@ -1,0 +1,43 @@
+name: Initialize
+
+on:
+  workflow_call:
+    inputs:
+      organization_name:
+        type: string
+        required: true
+      package_name:
+        type: string
+        required: true
+        
+jobs:
+    rename:
+      uses: ./.github/workflows/rename-package.yml
+      with:
+        organization_name: ${{ inputs.organization_name }}
+        package_name: ${{ inputs.package_name }}
+        
+    clear-documentation:
+      runs-on: ubuntu-latest
+      needs: [rename]
+      
+      steps:
+        - run: git config --global core.symlinks false
+        
+        - uses: actions/checkout@v3
+          with:
+            fetch-depth: 0
+            ref: main
+        
+        - run: |
+            rm -f Documentation~/manual/*
+            rm -f Documentation~/resources/*
+            echo "# ${{ inputs.package_name }}" > Documentation~/index.md
+            sed -i 's/PhantasmicDev//' .github/FUNDING.yml
+          
+        - name: Commit & Push
+          uses: EndBug/add-and-commit@v9.1.1
+          with:
+            message: Initialized Package
+            committer_name: GitHub Actions
+            committer_email: 41898282+github-actions[bot]@users.noreply.github.com
